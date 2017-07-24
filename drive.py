@@ -20,32 +20,7 @@ sio = socketio.Server()
 app = Flask(__name__)
 model = None
 prev_image_array = None
-
-
-class SimplePIController:
-    def __init__(self, Kp, Ki):
-        self.Kp = Kp
-        self.Ki = Ki
-        self.set_point = 0.
-        self.error = 0.
-        self.integral = 0.
-
-    def set_desired(self, desired):
-        self.set_point = desired
-
-    def update(self, measurement):
-        # proportional error
-        self.error = self.set_point - measurement
-
-        # integral error
-        self.integral += self.error
-
-        return self.Kp * self.error + self.Ki * self.integral
-
-
-controller = SimplePIController(0.1, 0.002)
-set_speed = 9
-controller.set_desired(set_speed)
+from utils import preprocess_img
 
 
 @sio.on('telemetry')
@@ -60,11 +35,17 @@ def telemetry(sid, data):
         # The current image from the center camera of the car
         imgString = data["image"]
         image = Image.open(BytesIO(base64.b64decode(imgString)))
-        image_array = np.asarray(image)
+        image_array = preprocess_img(np.asarray(image))
         steering_angle = float(model.predict(image_array[None, :, :, :], batch_size=1))
-
-        throttle = controller.update(float(speed))
-
+        min_speed = 8
+        max_speed = 10
+        if float(speed) < min_speed:
+            throttle = 1.0
+        elif float(speed) > max_speed:
+            throttle = -1.0
+        else:
+            throttle = 0.1
+        
         print(steering_angle, throttle)
         send_control(steering_angle, throttle)
 
@@ -118,7 +99,7 @@ if __name__ == '__main__':
     if model_version != keras_version:
         print('You are using Keras version ', keras_version,
               ', but the model was built using ', model_version)
-
+        
     model = load_model(args.model)
 
     if args.image_folder != '':
