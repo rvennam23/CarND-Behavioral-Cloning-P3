@@ -14,7 +14,7 @@ import os
 def drop_low_steeringangle_data(data):
     """ Drop some low steering angle samples  """
     index = data[abs(data['steering'])<.05].index.tolist()
-    rows = [i for i in index if np.random.randint(10) < 8]
+    rows = [i for i in index if np.random.randint(10) < 4]
     data = data.drop(data.index[rows])
     print("Dropped %s rows with low steering"%(len(rows)))
     return data
@@ -48,13 +48,13 @@ def choose_image(data, value, data_path):
     random = np.random.randint(4)
     if (random == 0):
         img_path = data['left'][value].strip()
-        shift_ang = .25
+        shift_ang = .20
     if (random == 1 or random == 3):
         img_path = data['center'][value].strip()
         shift_ang = 0.
     if (random == 2):
         img_path = data['right'][value].strip()
-        shift_ang = -.25
+        shift_ang = -.20
     img = process_img_from_path(os.path.join(data_path, img_path))
     steer_ang = float(data['steering'][value]) + shift_ang
     return img, steer_ang
